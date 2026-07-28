@@ -1,0 +1,83 @@
+# kube-prometheus-stack values tuned for a local Kind cluster.
+# Scrapes Kubernetes / node metrics plus app ServiceMonitors (e.g. MinIO).
+
+fullnameOverride: kube-prometheus
+
+defaultRules:
+  create: true
+  rules:
+    alertmanager: false
+    etcd: false
+    kubeProxy: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeControllerManager: false
+
+alertmanager:
+  enabled: false
+
+grafana:
+  adminPassword: admin
+  defaultDashboardsEnabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+prometheus:
+  prometheusSpec:
+    retention: 12h
+    retentionSize: 1GB
+    serviceMonitorNamespaceSelector: {}
+    serviceMonitorSelector: {}
+    serviceMonitorSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 384Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+kubeStateMetrics:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+nodeExporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+# Control-plane components are not exposed the same way on Kind.
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+
+kubeProxy:
+  enabled: false
