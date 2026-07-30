@@ -11,10 +11,10 @@ Deploys [kube-prometheus-stack](https://github.com/prometheus-community/helm-cha
 
 ## Prerequisites
 
-- [opentofu-kind](../opentofu-kind) — Kind cluster with `./.kubeconfig`
+- [opentofu-kind](https://github.com/danielnuriyev/opentofu-kind) — Kind cluster with `./.kubeconfig`
 - [Helm](https://helm.sh/): `brew install helm`
 
-Deploy **before** [opentofu-minio](../opentofu-minio) when using MinIO Prometheus scraping (ServiceMonitor CRD must exist).
+Deploy **before** [opentofu-minio](https://github.com/danielnuriyev/opentofu-minio) when using MinIO Prometheus scraping (ServiceMonitor CRD must exist).
 
 ## Deploy
 
