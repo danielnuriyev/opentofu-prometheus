@@ -14,28 +14,45 @@ terraform {
 }
 
 locals {
-  kubeconfig  = "${path.module}/../opentofu-kind/.kubeconfig"
-  release     = "kube-prometheus"
-  namespace   = "monitoring"
-  chart       = "kube-prometheus-stack"
-  chart_repo  = "https://prometheus-community.github.io/helm-charts"
-  chart_version = "69.8.2"
+  kubeconfig             = "${path.module}/../opentofu-kind/.kubeconfig"
+  release                = "kube-prometheus"
+  namespace              = "monitoring"
+  chart                  = "kube-prometheus-stack"
+  chart_repo             = "https://prometheus-community.github.io/helm-charts"
+  chart_version          = "69.8.2"
+  mattermost_webhook_file = "${path.module}/../opentofu-mattermost/mattermost-webhook.url"
+  alerting_values_file   = "${path.module}/.generated/grafana-alerting-values.yaml"
 }
 
 resource "null_resource" "monitoring" {
   triggers = {
-    values         = filemd5("${path.module}/values.yaml")
-    chart_version  = local.chart_version
-    kubeconfig     = local.kubeconfig
-    release        = local.release
-    namespace      = local.namespace
+    values                = filemd5("${path.module}/values.yaml")
+    alerting_template     = filemd5("${path.module}/grafana-alerting-values.yaml.tpl")
+    mattermost_webhook    = fileexists(local.mattermost_webhook_file) ? filemd5(local.mattermost_webhook_file) : "pending"
+    chart_version         = local.chart_version
+    kubeconfig            = local.kubeconfig
+    release               = local.release
+    namespace             = local.namespace
   }
 
   provisioner "local-exec" {
     command = <<-EOT
       set -euo pipefail
       test -f "${local.kubeconfig}" || { echo "Kubeconfig not found. Run tofu apply in opentofu-kind first."; exit 1; }
+      test -f "${local.mattermost_webhook_file}" || { echo "Mattermost webhook not found. Run tofu apply in opentofu-mattermost first."; exit 1; }
       command -v helm >/dev/null || { echo "helm not found. Install with: brew install helm"; exit 1; }
+
+      mkdir -p "${path.module}/.generated"
+      MATTERMOST_WEBHOOK_URL="$(tr -d '\r\n' < "${local.mattermost_webhook_file}")"
+      sed "s|\$${mattermost_webhook_url}|$MATTERMOST_WEBHOOK_URL|g" \
+        "${path.module}/grafana-alerting-values.yaml.tpl" > "${local.alerting_values_file}"
+
+      # Recreate Mattermost webhook secret (lost if monitoring namespace was recreated)
+      kubectl --kubeconfig="${local.kubeconfig}" create namespace "${local.namespace}" --dry-run=client -o yaml | kubectl apply -f -
+      kubectl --kubeconfig="${local.kubeconfig}" create secret generic mattermost-grafana-webhook \
+        -n "${local.namespace}" \
+        --from-literal=url="$MATTERMOST_WEBHOOK_URL" \
+        --dry-run=client -o yaml | kubectl apply -f -
 
       helm repo add prometheus-community "${local.chart_repo}" 2>/dev/null || true
       helm repo update prometheus-community
@@ -46,6 +63,7 @@ resource "null_resource" "monitoring" {
         --create-namespace \
         --version "${local.chart_version}" \
         --values "${path.module}/values.yaml" \
+        --values "${local.alerting_values_file}" \
         --wait \
         --timeout 10m
 
@@ -95,6 +113,7 @@ resource "null_resource" "monitoring" {
         2>/dev/null || true
       kubectl --kubeconfig="${self.triggers.kubeconfig}" delete namespace "${self.triggers.namespace}" \
         --ignore-not-found --wait=false
+      kubectl --kubeconfig="${self.triggers.kubeconfig}" wait --for=delete namespace/"${self.triggers.namespace}" --timeout=120s 2>/dev/null || true
     EOT
   }
 }
