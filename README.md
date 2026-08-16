@@ -12,7 +12,7 @@ Deploys [kube-prometheus-stack](https://github.com/prometheus-community/helm-cha
 
 ## Prerequisites
 
-- [opentofu-kind](https://github.com/danielnuriyev/opentofu-kind) — Kind cluster with `./.kubeconfig`
+- [pulumi-kind](../pulumi-kind/) — Kind cluster with `./.kubeconfig`
 - [Helm](https://helm.sh/): `brew install helm`
 
 Deploy **before** [opentofu-minio](https://github.com/danielnuriyev/opentofu-minio) when using MinIO Prometheus scraping (ServiceMonitor CRD must exist).
@@ -29,7 +29,7 @@ tofu apply
 ## Access Grafana
 
 ```bash
-export KUBECONFIG=../opentofu-kind/.kubeconfig
+export KUBECONFIG=../pulumi-kind/.kubeconfig
 kubectl port-forward -n monitoring svc/kube-prometheus-grafana 3000:80
 ```
 
@@ -76,7 +76,7 @@ If you use a custom Mattermost webhook:
 **From the cluster** (uses provisioned contact point URL from Grafana):
 
 ```bash
-export KUBECONFIG=../opentofu-kind/.kubeconfig
+export KUBECONFIG=../pulumi-kind/.kubeconfig
 
 kubectl exec -n monitoring deploy/kube-prometheus-grafana -c grafana -- sh -c '
 CP=$(wget -qO- --header="Authorization: Basic YWRtaW46YWRtaW4=" http://localhost:3000/api/v1/provisioning/contact-points)

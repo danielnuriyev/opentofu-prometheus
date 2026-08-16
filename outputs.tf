@@ -1,5 +1,5 @@
 output "kubeconfig" {
-  description = "Path to the Kind cluster kubeconfig (from opentofu-kind)"
+  description = "Path to the Kind cluster kubeconfig (from pulumi-kind)"
   value       = local.kubeconfig
 }
 
